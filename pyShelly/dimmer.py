@@ -4,6 +4,7 @@ from .device import Device
 
 from .const import (
     LOGGER,
+    LIGHT_MAX_TRANSITION_TIME,
     STATUS_RESPONSE_LIGHTS,
     STATUS_RESPONSE_LIGHTS_STATE,
     STATUS_RESPONSE_LIGHTS_BRIGHTNESS,
@@ -73,13 +74,18 @@ class Dimmer(Device):
 
         self._update(src, new_state, values)
 
-    def _send_data(self, state, brightness=None):
+    def _send_data(self, state, brightness=None, transition=None):
         url = self.url + "?"
         payload = {}
+        if transition is not None:
+            transition = min(int(transition * 1000), LIGHT_MAX_TRANSITION_TIME)
+            url += "transition=" + str(transition) + "&"
+            payload["transition"] = transition
         if state is not None:
             if not state or brightness == 0:
                 url += "turn=off"
-                self._send_command(url, "light/0/set", {"turn":"off"})
+                payload["turn"] = "off"
+                self._send_command(url, "light/0/set", payload)
                 return
             url += "turn=on&"
             payload["turn"] = "on"
@@ -89,11 +95,11 @@ class Dimmer(Device):
 
         self._send_command(url, "light/0/set", payload)
 
-    def turn_on(self, brightness=None):
-        self._send_data(True, brightness)
+    def turn_on(self, brightness=None, transition=None):
+        self._send_data(True, brightness, transition)
 
-    def turn_off(self):
-        self._send_data(False)
+    def turn_off(self, transition=None):
+        self._send_data(False, transition=transition)
 
     def get_dim_value(self):
         return self.brightness

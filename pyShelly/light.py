@@ -4,6 +4,7 @@ from .device import Device
 
 from .const import (
     LOGGER,
+    LIGHT_MAX_TRANSITION_TIME,
     EFFECTS_BULB,
     EFFECTS_RGBW2,
     STATUS_RESPONSE_LIGHTS,
@@ -29,7 +30,7 @@ class Light(Device):
         super(Light, self).__init__(block)
 
 class LightWhite(Light):
-    def __init__(self, block, channel, state_pos, bright_pos, 
+    def __init__(self, block, channel, state_pos, bright_pos,
                  temp_pos=None, power_pos=None):
         super(LightWhite, self).__init__(block)
         self.id = block.id
@@ -110,10 +111,15 @@ class LightWhite(Light):
             values = {'color_temp': self.color_temp, 'brightness': self.brightness}
             self._update(src, new_state, values)
 
-    def _send_data(self, state, brightness=None, color_temp=None):
+    def _send_data(self, state, brightness=None, transition=None, color_temp=None):
         url = self.url + "?"
         topic = 'white/' + str(self._channel) + '/set'
         payload = {}
+
+        if transition is not None:
+            transition = min(int(transition * 1000), LIGHT_MAX_TRANSITION_TIME)
+            url += "transition=" + str(transition) + "&"
+            payload["transition"] = transition
 
         if state is not None:
             if not state or brightness == 0:
@@ -134,14 +140,14 @@ class LightWhite(Light):
 
         self._send_command(url, topic, payload)
 
-    def turn_on(self, brightness=None, color_temp=None):
-        self._send_data(True, brightness, color_temp)
+    def turn_on(self, brightness=None, transition=None, color_temp=None):
+        self._send_data(True, brightness, transition, color_temp)
 
     def set_values(self, state=None, brightness=None, color_temp=None, **kwargs):
-        self._send_data(state, brightness, color_temp)
+        self._send_data(state, brightness, color_temp=color_temp)
 
-    def turn_off(self):
-        self._send_data(False)
+    def turn_off(self, transition=None):
+        self._send_data(False, transition=transition)
 
     def get_dim_value(self):
         return self.brightness
@@ -209,14 +215,14 @@ class LightRGB(Light):
             new_state = status['ison']
 
             self.mode = status['mode']
-            
+
             if self.mode == 'color':
                 self.brightness = int(status.get('gain', 0))
                 self.white_value = int(status.get('white', 0))
                 self.rgb = [int(status.get('red')),
                             int(status.get('green')),
                             int(status.get('blue'))]
-            
+
             self.effect = int(status.get('effect', 0))
             self.color_temp = int(status.get('temp', 0)) #???
 
@@ -316,10 +322,15 @@ class LightRGB(Light):
                       'effect': self.effect}
             self._update(src, new_state, values)
 
-    def _send_data(self, state, brightness=None, rgb=None, color_temp=None,
+    def _send_data(self, state, brightness=None, transition=None, rgb=None, color_temp=None,
                    mode=None, effect=None, white_value=None):
         url = self.url + "?"
         payload = {}
+
+        if transition is not None:
+            transition = min(int(transition * 1000), LIGHT_MAX_TRANSITION_TIME)
+            url += "transition=" + str(transition) + "&"
+            payload["transition"] = transition
 
         if state is not None:
             if not state or brightness == 0:
@@ -366,18 +377,18 @@ class LightRGB(Light):
 
         self._send_command(url, self.topic + "/set", payload)
 
-    def turn_on(self, rgb=None, brightness=None, color_temp=None, mode=None,
+    def turn_on(self, rgb=None, brightness=None, transition=None, color_temp=None, mode=None,
                 effect=None, white_value=None):
-        self._send_data(True, brightness, rgb,
+        self._send_data(True, brightness, transition, rgb,
                         color_temp, mode, effect, white_value)
 
     def set_values(self, rgb=None, brightness=None, color_temp=None, mode=None,
                    effect=None, white_value=None, **kwargs):
-        self._send_data(None, brightness, rgb,
+        self._send_data(None, brightness, None, rgb,
                         color_temp, mode, effect, white_value)
 
-    def turn_off(self):
-        self._send_data(False)
+    def turn_off(self, transition=None):
+        self._send_data(False, transition=transition)
 
     def get_dim_value(self):
         return self.brightness

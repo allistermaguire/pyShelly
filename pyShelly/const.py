@@ -17,6 +17,9 @@ MDNS_PORT = 5353
 #20201019-110845/v1.6.6_4Pro@bad181e4
 REGEX_VER = r"^20(\d{6}).+v(\d+\.\d+\.\d+(-rc\d)?)([^\d].*)?$"
 
+# Max light transition time in milliseconds
+LIGHT_MAX_TRANSITION_TIME = 5000
+
 """Define constants for result from /status response from device"""
 STATUS_RESPONSE_RELAYS = 'relays'
 STATUS_RESPONSE_RELAY_OVER_POWER = 'overpower'
@@ -194,4 +197,3 @@ RSSI_LEVELS = {
     -70 : "good",
     -1000: "weak"
 }
-
